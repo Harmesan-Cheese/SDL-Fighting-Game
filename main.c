@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
+#include <stdlib.h>
 
 #define WINDOW_WIDTH (640)
 #define WINDOW_HEIGHT (480)
@@ -14,7 +15,6 @@ struct character {
    struct SDL_Texture *tex;
    struct SDL_Rect srcrect;
    struct SDL_Rect dstrect;
-   int turn;
 };
 
 struct button {
@@ -24,15 +24,16 @@ struct button {
 };
 
 SDL_Window *init();
+void rendertext(char *text, SDL_Renderer *rend, int x, int y);
 SDL_Rect makerect(int x, int y, int w, int h);
-struct character makecharacter(char *name, int health, int attack, SDL_Texture *tex, SDL_Rect srcrect, SDL_Rect dstrect, int turn);
+struct character makecharacter(char *name, int health, int attack, SDL_Texture *tex, SDL_Rect srcrect, SDL_Rect dstrect);
 struct button makebutton(SDL_Texture *buttontex, SDL_Rect buttonrect);
 int clickedbutton(SDL_Event event, struct button button);
 SDL_Texture * maketext(TTF_Font *font, char *text, SDL_Renderer *rend);
 SDL_Texture *loadassest(char *filename, SDL_Renderer *rend, SDL_Window *win);
 void handleinput();
 void update(SDL_Window *win, SDL_Renderer *rend);
-void render(SDL_Renderer *rend, struct character tyler, struct character raul);
+void render(SDL_Renderer *rend, struct character charlist[4]);
 
 int scene = 0;
 int closerequest = 0;
@@ -41,10 +42,11 @@ struct button attackbutton;
 struct button selectcharbutton;
 struct button tylerbutton;
 struct button raulbutton;
+struct button scenebutton;
 //struct button donebutton;
 
-struct character tyler;
-struct character raul;
+struct character charlist[4];
+TTF_Font *font;
 
 int main()
 {
@@ -59,7 +61,7 @@ int main()
       return 1;
    }
 
-   TTF_Font *font = TTF_OpenFont("assests/ARCADECLASSIC.ttf", 30);
+   font = TTF_OpenFont("assests/ARCADECLASSIC.ttf", 30);
    SDL_Texture *messagetex = maketext(font, "Start Game", rend);
    SDL_Rect messagerect;
 
@@ -72,26 +74,34 @@ int main()
    SDL_Rect selecttylerrect;
    SDL_Texture *selectraultex = maketext(font, "Raul", rend);
    SDL_Rect selectraulrect;
+   SDL_Texture *scenetex = maketext(font, "Scene 2", rend);
+   SDL_Rect scenerect;
+
    //SDL_Texture *donetex = maketext(font, "Done Selecting", rend);
    //SDL_Rect donerect;
 
    charactertoprect.x = 10;
    selecttylerrect.x = 10;
    selectraulrect.x = 10;
+   scenerect.x = 10;
    //donerect.x = 10;
    charactertoprect.y = 30;
    selecttylerrect.y = 100;
    selectraulrect.y = 150;
+   scenerect.y = 200;
    //donerect.y = 200;
 
    SDL_QueryTexture(charactertoptex, NULL, NULL, &charactertoprect.w, &charactertoprect.h);
    SDL_QueryTexture(selecttylertex, NULL, NULL, &selecttylerrect.w, &selecttylerrect.h);
    SDL_QueryTexture(selectraultex, NULL, NULL, &selectraulrect.w, &selectraulrect.h);
+   SDL_QueryTexture(scenetex, NULL, NULL, &scenerect.w, &scenerect.h);
    //SDL_QueryTexture(donetex, NULL, NULL, &donerect.w, &donerect.h);
+
 
    selectcharbutton = makebutton(charactertoptex, charactertoprect);
    tylerbutton = makebutton(selecttylertex, selecttylerrect);
    raulbutton = makebutton(selectraultex, selectraulrect);
+   scenebutton = makebutton(scenetex, scenerect);
    //donebutton = makebutton(donetex, donerect);
 
 
@@ -110,11 +120,11 @@ int main()
    while (!closerequest) {
       handleinput();
       update(win, rend);
-      render(rend, tyler, raul);
+      render(rend, charlist);
    }
 
-   SDL_DestroyTexture(tyler.tex);
-   SDL_DestroyTexture(raul.tex);
+   SDL_DestroyTexture(charlist[0].tex);
+   SDL_DestroyTexture(charlist[1].tex);
    SDL_DestroyRenderer(rend);
    SDL_DestroyWindow(win);
 
@@ -133,6 +143,7 @@ void handleinput()
             startbutton.clicked = clickedbutton(event, startbutton);
             tylerbutton.clicked = clickedbutton(event, tylerbutton);
             raulbutton.clicked = clickedbutton(event, raulbutton);
+            attackbutton.clicked = clickedbutton(event, attackbutton);
             //donebutton.clicked = clickedbutton(event, donebutton);
       }
    }
@@ -142,28 +153,54 @@ void update(SDL_Window *win, SDL_Renderer *rend)
 {
    if (startbutton.clicked == 1 && scene == 0) {
       scene = 1;
-      tyler.dstrect.x = 0;
-      tyler.dstrect.y = 0;
-   } else if (tylerbutton.clicked == 1 && (scene == 1 || scene == 2)) {
+   } else if (tylerbutton.clicked == 1 && scene == 1) {
       SDL_Texture *tylertex = loadassest("assests/Tyler.png", rend, win);
       SDL_Rect tylersrcrect = makerect(0, 0, 60, 120);
-      SDL_Rect tylerdstrect = makerect(150, 250, 120, 250);
-      tyler = makecharacter("Tyler", 100, 20, tylertex, tylersrcrect, tylerdstrect, scene);
-      
+      SDL_Rect tylerdstrect = makerect(300, 250, 120, 250);
+      charlist[0] = makecharacter("Tyler", 100, 20, tylertex, tylersrcrect, tylerdstrect);
+
+      scene = 2;
+      tylerbutton.clicked = 0;
+   } else if (tylerbutton.clicked == 1 && scene == 2) {
+      SDL_Texture *tylertex = loadassest("assests/Tyler.png", rend, win);
+      SDL_Rect tylersrcrect = makerect(0, 0, 60, 120);
+      SDL_Rect tylerdstrect = makerect(300, 250, 120, 250);
+      charlist[1] = makecharacter("Tyler", 100, 20, tylertex, tylersrcrect, tylerdstrect);
+
       scene = 3;
-   } else if (raulbutton.clicked == 1 && (scene == 1 || scene == 2)) {
+      tylerbutton.clicked = 0;
+   } else if (raulbutton.clicked == 1 && scene == 1) {
       SDL_Texture *raultex = loadassest("assests/Raul.png", rend, win);
       SDL_Rect raulsrcrect = makerect(0, 0, 50, 75);
-      SDL_Rect rauldstrect = makerect(150, 250, 100, 150);
-      raul = makecharacter("Raul", 100, 20, raultex, raulsrcrect, rauldstrect, scene);
+      SDL_Rect rauldstrect = makerect(100, 100, 100, 150);
+      charlist[0] = makecharacter("Raul", 100, 20, raultex, raulsrcrect, rauldstrect);
       
-      scene = 4;
-   } //else if (donebutton.clicked == 1 && (scene == 1 || scene == 2)) {
+      scene = 2;
+      raulbutton.clicked = 0;
+   } else if (raulbutton.clicked == 1 && scene == 2) {
+      SDL_Texture *raultex = loadassest("assests/Raul.png", rend, win);
+      SDL_Rect raulsrcrect = makerect(0, 0, 50, 75);
+      SDL_Rect rauldstrect = makerect(100, 100, 100, 150);
+      charlist[1] = makecharacter("Raul", 100, 20, raultex, raulsrcrect, rauldstrect);
+      
+      scene = 3;
+      raulbutton.clicked = 0;
+   } else if (attackbutton.clicked == 1 && scene == 3) {
+         charlist[1].health -= charlist[0].attack;
+         attackbutton.clicked = 0;
+         scene = 4;
+   } else if (attackbutton.clicked == 1 && scene == 4) {
+         charlist[0].health -= charlist[1].attack;
+         attackbutton.clicked = 0;
+         scene = 3;
+   }
+      
+      //else if (donebutton.clicked == 1 && (scene == 1 || scene == 2)) {
       //scene = 3;
    //}
 }
 
-void render(SDL_Renderer *rend, struct character tyler, struct character raul)
+void render(SDL_Renderer *rend, struct character charlist[4])
 {
    SDL_RenderClear(rend);
    if (scene == 0) {
@@ -177,13 +214,20 @@ void render(SDL_Renderer *rend, struct character tyler, struct character raul)
       SDL_RenderCopy(rend, selectcharbutton.tex, NULL, &selectcharbutton.rect);
       SDL_RenderCopy(rend, tylerbutton.tex, NULL, &tylerbutton.rect);
       SDL_RenderCopy(rend, raulbutton.tex, NULL, &raulbutton.rect);
+      SDL_RenderCopy(rend, scenebutton.tex, NULL, &scenebutton.rect);
       //SDL_RenderCopy(rend, donebutton.tex, NULL, &donebutton.rect);
    } else if (scene == 3) {
-      SDL_RenderCopy(rend, tyler.tex, &tyler.srcrect, &tyler.dstrect);
+      SDL_RenderCopy(rend, charlist[0].tex, &charlist[0].srcrect, &charlist[0].dstrect);
       SDL_RenderCopy(rend, attackbutton.tex, NULL, &attackbutton.rect);
+      char *healthstr = (char *) malloc(15 * sizeof(char));
+      sprintf(healthstr, "Health %d", charlist[0].health);
+      rendertext(healthstr, rend, 10, 30);
    } else if (scene == 4) {
-      SDL_RenderCopy(rend, raul.tex, &raul.srcrect, &raul.dstrect);
+      SDL_RenderCopy(rend, charlist[1].tex, &charlist[1].srcrect, &charlist[1].dstrect);
       SDL_RenderCopy(rend, attackbutton.tex, NULL, &attackbutton.rect);
+      char *healthstr = (char *) malloc(15 * sizeof(char));
+      sprintf(healthstr, "Health %d", charlist[1].health);
+      rendertext(healthstr, rend, 10, 30);
    }
    SDL_RenderPresent(rend);
 }
@@ -257,7 +301,7 @@ SDL_Texture *maketext(TTF_Font *font, char *text, SDL_Renderer *rend)
    return messagetex;
 }
 
-struct character makecharacter(char *name, int health, int attack, SDL_Texture *tex, SDL_Rect srcrect, SDL_Rect dstrect, int turn)
+struct character makecharacter(char *name, int health, int attack, SDL_Texture *tex, SDL_Rect srcrect, SDL_Rect dstrect)
 {
    struct character newcharacter;
 
@@ -269,7 +313,6 @@ struct character makecharacter(char *name, int health, int attack, SDL_Texture *
    newcharacter.tex = tex;
    newcharacter.srcrect = srcrect;
    newcharacter.dstrect = dstrect;
-   newcharacter.turn = turn;
 
    return newcharacter;
 }
@@ -295,4 +338,19 @@ int clickedbutton(SDL_Event event, struct button button)
    else if (event.button.y > button.rect.y + button.rect.h) button.clicked = 0;
    
    return button.clicked;
+}
+
+void rendertext(char *text, SDL_Renderer *rend, int x, int y)
+{
+   SDL_Color textcolor = {255,255,255};
+   SDL_Surface *message = TTF_RenderText_Solid(font, text, textcolor);
+   SDL_Texture *messagetex = SDL_CreateTextureFromSurface(rend, message);
+   SDL_FreeSurface(message);
+   
+   int w, h;
+   SDL_QueryTexture(messagetex, NULL, NULL, &w, &h);
+   SDL_Rect dstrect = makerect(x, y, w, h);
+
+   SDL_RenderCopy(rend, messagetex, NULL, &dstrect);
+   SDL_DestroyTexture(messagetex);
 }
